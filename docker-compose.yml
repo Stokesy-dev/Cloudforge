@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: cloudforge
+      MYSQL_USER: cloudforge
+      MYSQL_PASSWORD: cloudforge
+      MYSQL_ROOT_PASSWORD: root
+    volumes: [mysql_data:/var/lib/mysql]
+    healthcheck: {test: ["CMD", "mysqladmin", "ping", "-h", "localhost"], interval: 5s, timeout: 5s, retries: 20}
+  backend:
+    build: ./backend
+    ports: ["${BACKEND_PORT:-8000}:8000"]
+    env_file: [.env]
+    environment: {DATABASE_URL: mysql+pymysql://cloudforge:cloudforge@mysql:3306/cloudforge, WORKSPACE_DIR: /tmp/cloudforge-builds}
+    volumes: [/var/run/docker.sock:/var/run/docker.sock, build_workspace:/tmp/cloudforge-builds]
+    depends_on: {mysql: {condition: service_healthy}}
+  frontend:
+    build: ./frontend
+    ports: ["${FRONTEND_PORT:-5173}:5173"]
+    depends_on: [backend]
+volumes: {mysql_data: {}, build_workspace: {}}
